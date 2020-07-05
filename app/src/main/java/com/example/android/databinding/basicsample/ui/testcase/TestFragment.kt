@@ -12,16 +12,11 @@ import com.example.android.databinding.basicsample.extensions.observe
 import com.example.android.databinding.basicsample.ui.base.BaseFragment
 import com.example.android.databinding.basicsample.ui.testcase.adapter.AdapterCallbacks
 import com.example.android.databinding.basicsample.ui.testcase.adapter.TestAdapter
+import com.example.android.databinding.basicsample.util.autoClearedDeinit
 
 class TestFragment : BaseFragment<FragmentTestFragmentBinding>() {
 
     // region Properties
-
-    private val testLayoutManager by lazy { LinearLayoutManager(context) }
-
-    private val testAdapter by lazy { TestAdapter(callbacks) }
-
-    private val testRecycler by lazy { binding.list }
 
     private val viewModel by viewModels<TestViewModel> { defaultViewModelProviderFactory }
 
@@ -34,6 +29,23 @@ class TestFragment : BaseFragment<FragmentTestFragmentBinding>() {
         )
     }
 
+    // region UI References
+
+    private val testLayoutManager by lazy { LinearLayoutManager(context) }
+
+    private val testAdapter by lazy { TestAdapter(callbacks) }
+
+    private val testRecyclerLazyRef by lazy { binding.list }
+
+    /**
+     * Deiniting the object seems to be a viable way to fix this, but I am not sure if it is fully safe
+     */
+    private var testRecyclerWithDeinit by autoClearedDeinit<RecyclerView> {
+        performSomeTestOperation(it)
+    }
+
+    // endregion UI References
+
     // endregion Properties
 
     // region Functions
@@ -43,7 +55,7 @@ class TestFragment : BaseFragment<FragmentTestFragmentBinding>() {
     override fun onDestroyView() {
         // FIXME Do anything here with binding object
         // This case is actually less important but is not unlike things we would like to be doing
-        testRecycler.recycledViewPool
+        performSomeTestOperation(testRecyclerLazyRef)
         super.onDestroyView()
     }
 
@@ -57,9 +69,12 @@ class TestFragment : BaseFragment<FragmentTestFragmentBinding>() {
         with(binding.list) {
             layoutManager = testLayoutManager
             adapter = testAdapter
+            testRecyclerWithDeinit = this
         }
         observe(viewModel.listItemsLiveData, testAdapter::submitList)
     }
+
+    private fun performSomeTestOperation(it: RecyclerView) = it.recycledViewPool
 
     // endregion Functions
 
